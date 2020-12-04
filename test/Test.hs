@@ -517,11 +517,174 @@ matrixTests = TestList
     , TestLabel "testMatrix22" testMatrix22
     ]
 
+-- chapter 4 tests, transformations.feature
+
+-- Scenario: Multiplying by a translation matrix
+testTransform01 = TestCase $ do
+    let t = translation 5 (-3) 2
+    let p = point (-3) 4 5
+    assertEqual "for (matrixMult t p)" (point 2 1 7) (matrixMult t p)
+
+-- Scenario: Multiplying by the inverse of a translation matrix
+testTransform02 = TestCase $ do
+    let t = translation 5 (-3) 2
+    let inv = inverse t
+    let p = point (-3) 4 5
+    assertEqual "for (matrixMult inv p)" (point (-8) 7 3) (matrixMult inv p)
+
+-- Scenario: Translation does not affect vectors
+testTransform03 = TestCase $ do
+    let t = translation 5 (-3) 2
+    let v = vector (-3) 4 5
+    assertEqual "for (matrixMult t v)" v (matrixMult t v)
+
+-- Scenario: A scaling matrix applied to a point
+testTransform04 = TestCase $ do
+    let t = scaling 2 3 4
+    let p = point (-4) 6 8
+    assertEqual "for (matrixMult t p)" (point (-8) 18 32) (matrixMult t p)
+
+-- Scenario: A scaling matrix applied to a vector
+testTransform05 = TestCase $ do
+    let t = scaling 2 3 4
+    let v = vector (-4) 6 8
+    assertEqual "for (matrixMult t v)" (vector (-8) 18 32) (matrixMult t v)
+
+-- Scenario: Multiplying by the inverse of a scaling matrix
+testTransform06 = TestCase $ do
+    let t = scaling 2 3 4
+    let inv = inverse t
+    let v = vector (-4) 6 8
+    assertEqual "for (matrixMult inv v)" (vector (-2) 2 2) (matrixMult inv v)
+
+-- Scenario: Reflection is scaling by a negative value
+testTransform07 = TestCase $ do
+    let t = scaling (-1) 1 1
+    let p = point 2 3 4
+    assertEqual "for (matrixMult t p)" (point (-2) 3 4) (matrixMult t p)
+
+-- Scenario: Rotating a point around the x axis
+testTransform08 = TestCase $ do
+    let p = point 0 1 0
+    let halfQuarter = rotationX (pi / 4)
+    let fullQuarter = rotationX (pi / 2)
+    assertEqual "for (matrixMult halfQuarter p)"
+        (point 0 (sqrt 2 / 2) (sqrt 2 /2)) (matrixMult halfQuarter p)
+    assertEqual "for (matrixMult fullQuarter p)"
+        (point 0 0 1) (matrixMult fullQuarter p)
+
+-- Scenario: The inverse of an x-rotation rotates in the opposite direction
+testTransform09 = TestCase $ do
+    let p = point 0 1 0
+    let halfQuarter = rotationX (pi / 4)
+    let inv = inverse halfQuarter
+    assertEqual "for (matrixMult inv p)"
+        (point 0 (sqrt 2 / 2) (-(sqrt 2) / 2)) (matrixMult inv p)
+
+-- Scenario: Rotating a point around the y axis
+testTransform10 = TestCase $ do
+    let p = point 0 0 1
+    let halfQuarter = rotationY (pi / 4)
+    let fullQuarter = rotationY (pi / 2)
+    assertEqual "for (halfQurter % p)"
+        (point (sqrt 2 / 2) 0 (sqrt 2 / 2)) (halfQuarter % p)
+    assertEqual "for (fullQuarter % p)"
+        (point 1 0 0) (fullQuarter % p)
+
+-- Scenario: Rotating a point around the z axis
+testTransform11 = TestCase $ do
+    let p = point 0 1 0
+    let halfQuarter = rotationZ (pi / 4)
+    let fullQuarter = rotationZ (pi / 2)
+    assertEqual "for (halfQuarter % p)"
+        (point (-(sqrt 2) / 2) (sqrt 2 / 2) 0) (halfQuarter % p)
+    assertEqual "for (fullQuarter % p)"
+        (point (-1) 0 0) (fullQuarter % p)
+
+-- Scenario: A shearing transformation moves x in proportion to y
+testTransform12 = TestCase $ do
+    let t = shearing 1 0 0 0 0 0
+    let p = point 2 3 4
+    assertEqual "for (t % p)" (point 5 3 4) (t % p)
+
+-- Scenario: A shearing transformation moves x in proportion to z
+testTransform13 = TestCase $ do
+    let t = shearing 0 1 0 0 0 0
+    let p = point 2 3 4
+    assertEqual "for (t % p)" (point 6 3 4) (t % p)
+
+-- Scenario: A shearing transformation moves y in proportion to x
+testTransform14 = TestCase $ do
+    let t = shearing 0 0 1 0 0 0
+    let p = point 2 3 4
+    assertEqual "for (t % p)" (point 2 5 4) (t % p)
+
+-- Scenario: A shearing transformation moves y in proportion to z
+testTransform15 = TestCase $ do
+    let t = shearing 0 0 0 1 0 0
+    let p = point 2 3 4
+    assertEqual "for (t % p)" (point 2 7 4) (t % p)
+
+-- Scenario: A shearing transformation moves z in proportion to x
+testTransform16 = TestCase $ do
+    let t = shearing 0 0 0 0 1 0
+    let p = point 2 3 4
+    assertEqual "for (t % p)" (point 2 3 6) (t % p)
+
+-- Scenario: A shearing transformation moves z in proportion to y
+testTransform17 = TestCase $ do
+    let t = shearing 0 0 0 0 0 1
+    let p = point 2 3 4
+    assertEqual "for (t % p)" (point 2 3 7) (t % p)
+
+-- Scenario: Individual transformations are applied in sequence
+testTransform18 = TestCase $ do
+    let p = point 1 0 1
+    let a = rotationX (pi / 2)
+    let b = scaling 5 5 5
+    let c = translation 10 5 7
+    let p2 = a % p
+    let p3 = b % p2
+    let p4 = c % p3
+    assertEqual "for (a % p)" (point 1 (-1) 0) p2
+    assertEqual "for (b % p2)" (point 5 (-5) 0) p3
+    assertEqual "for (c % p3)" (point 15 0 7) p4
+
+-- Scenario: Chained transformations must be applied in reverse order
+testTransform19 = TestCase $ do
+    let p = point 1 0 1
+    let a = rotationX (pi / 2)
+    let b = scaling 5 5 5
+    let c = translation 10 5 7
+    let t = c % b % a
+    assertEqual "for (t % p)" (point 15 0 7) (t % p)
+
+transformTests = TestList
+    [ TestLabel "testTransform01" testTransform01
+    , TestLabel "testTransform02" testTransform02
+    , TestLabel "testTransform03" testTransform03
+    , TestLabel "testTransform04" testTransform04
+    , TestLabel "testTransform05" testTransform05
+    , TestLabel "testTransform06" testTransform06
+    , TestLabel "testTransform07" testTransform07
+    , TestLabel "testTransform08" testTransform08
+    , TestLabel "testTransform09" testTransform09
+    , TestLabel "testTransform10" testTransform10
+    , TestLabel "testTransform11" testTransform11
+    , TestLabel "testTransform12" testTransform12
+    , TestLabel "testTransform13" testTransform13
+    , TestLabel "testTransform14" testTransform14
+    , TestLabel "testTransform15" testTransform15
+    , TestLabel "testTransform16" testTransform16
+    , TestLabel "testTransform17" testTransform17
+    , TestLabel "testTransform18" testTransform18
+    , TestLabel "testTransform19" testTransform19
+    ]
+
 main :: IO ()
 main = do
-  results <- runTestTT $ TestList [tupleTests, canvasTests, matrixTests]
-  if (errors results + failures results == 0)
-    then
-      exitWith ExitSuccess
-    else
-      exitWith (ExitFailure 1)
+    results <- runTestTT $ TestList
+        [tupleTests, canvasTests, matrixTests, transformTests]
+    if (errors results + failures results == 0)
+        then exitWith ExitSuccess
+        else exitWith (ExitFailure 1)

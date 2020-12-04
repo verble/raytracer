@@ -11,6 +11,9 @@ type Color = (Double, Double, Double)
 color :: Double -> Double -> Double -> Color
 color r g b = (r, g, b)
 
+white :: Color
+white = color 1 1 1
+
 red :: Color -> Double
 red (r, _, _) = r
 
@@ -72,6 +75,9 @@ canvasToPpm :: Canvas -> PPM
 canvasToPpm c@(Canvas w h pixels) = ppmHeader ++ rows
     where ppmHeader = ["P3", show w ++ " " ++ show h, "255"]
           rows = toLines c
+
+writeCanvas :: Canvas -> String -> IO ()
+writeCanvas = writePpm . canvasToPpm
 
 toLines (Canvas w h pixels) =
     concatMap (lines . serializeRow 0) . groupsOf w
