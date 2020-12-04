@@ -7,8 +7,6 @@ import Control.Monad.ST
 import Control.Monad
 import Data.STRef
 
-import Tuple
-
 data Matrix = Matrix
     { numRows :: !Int
     , numCols :: !Int
@@ -21,6 +19,90 @@ instance Eq Matrix where
             && (numRowsB == numRowsA)
             && (V.and $ V.zipWith (\a b -> floatsEq a b) dataA dataB)
 
+tuple :: Double -> Double -> Double -> Double -> Matrix
+tuple x y z w = Matrix 4 1 $ V.fromList [x, y, z, w]
+
+epsilon :: Double
+epsilon = 0.00001
+
+floatsEq :: Double -> Double -> Bool
+floatsEq a b = abs (a - b) < epsilon
+
+x :: Matrix -> Double
+x (Matrix numRows numCols matrixData)
+    | numRows /= 4 || numCols /= 1 = error "matrix is not a tuple"
+    | otherwise = matrixData V.! 0
+
+y :: Matrix -> Double
+y (Matrix numRows numCols matrixData)
+    | numRows /= 4 || numCols /= 1 = error "matrix is not a tuple"
+    | otherwise = matrixData V.! 1
+
+z :: Matrix -> Double
+z (Matrix numRows numCols matrixData)
+    | numRows /= 4 || numCols /= 1 = error "matrix is not a tuple"
+    | otherwise = matrixData V.! 2
+
+w :: Matrix -> Double
+w (Matrix numRows numCols matrixData)
+    | numRows /= 4 || numCols /= 1 = error "matrix is not a tuple"
+    | otherwise = matrixData V.! 3
+
+isPoint :: Matrix -> Bool
+isPoint = floatsEq 1.0 . w
+
+isVector :: Matrix -> Bool
+isVector = not . floatsEq 1.0 . w
+
+point :: Double -> Double -> Double -> Matrix
+point x y z = tuple x y z 1.0
+
+vector :: Double -> Double -> Double -> Matrix
+vector x y z = tuple x y z 0.0
+
+addTuples :: Matrix -> Matrix -> Matrix
+addTuples = matrixAdd
+
+subTuples :: Matrix -> Matrix -> Matrix
+subTuples = matrixSub
+
+zero4x1 :: Matrix
+zero4x1 = vector 0 0 0
+
+negTuple :: Matrix -> Matrix
+negTuple (Matrix numRows numCols matrixData) =
+    Matrix numRows numCols $ V.map negate matrixData
+
+multScalar :: Matrix -> Double -> Matrix
+multScalar (Matrix numRows numCols matrixData) scalar =
+    Matrix numRows numCols $ V.map (* scalar) matrixData
+
+divScalar :: Matrix -> Double -> Matrix
+divScalar (Matrix numRows numCols matrixData) scalar =
+    Matrix numRows numCols $ V.map (/ scalar) matrixData
+
+magnitude :: Matrix -> Double
+magnitude m@(Matrix numRows numCols _)
+    | numRows /= 4 || numCols /= 1 = error "matrix is not a tuple"
+    | otherwise = sqrt ((x m ** 2) + (y m ** 2) + (z m ** 2) + (w m ** 2))
+
+normalize :: Matrix -> Matrix
+normalize matrix = divScalar matrix (magnitude matrix)
+
+dot :: Matrix -> Matrix -> Double
+dot m@(Matrix numRowsA numColsA _) n@(Matrix numRowsB numColsB _)
+    | numRowsA /= 4 || numColsA /= 1 = error "matrix is not a tuple"
+    | numRowsB /= 4 || numColsB /= 1 = error "matrix is not a tuple"
+    | otherwise = (x m * x n) + (y m * y n) + (z m * z n) + (w m * w n)
+
+cross :: Matrix -> Matrix -> Matrix
+cross m@(Matrix numRowsA numColsA _) n@(Matrix numRowsB numColsB _)
+    | numRowsA /= 4 || numColsA /= 1 = error "matrix is not a tuple"
+    | numRowsB /= 4 || numColsB /= 1 = error "matrix is not a tuple"
+    | otherwise = vector (y m * z n - z m * y n)
+                         (z m * x n - x m * z n)
+                         (x m * y n - y m * x n)
+
 elemAt :: Int -> Int -> Matrix -> Double
 elemAt row col (Matrix numRows numCols matrixData)
     | row < 0        = error msg
@@ -31,6 +113,17 @@ elemAt row col (Matrix numRows numCols matrixData)
     where msg = "index out of bounds: (" ++ show row ++ ", " ++ show col ++ ")"
           ix = (row * numCols) + col
 
+matrixAdd :: Matrix -> Matrix -> Matrix
+matrixAdd (Matrix numRowsA numColsA dataA) (Matrix numRowsB numColsB dataB)
+    | numRowsA /= numRowsB = error "number of rows not equal"
+    | numColsA /= numColsB = error "number of columns not equal"
+    | otherwise = Matrix numRowsA numColsA $ V.zipWith (+) dataA dataB
+
+matrixSub :: Matrix -> Matrix -> Matrix
+matrixSub (Matrix numRowsA numColsA dataA) (Matrix numRowsB numColsB dataB)
+    | numRowsA /= numRowsB = error "number of rows not equal"
+    | numColsA /= numColsB = error "number of columns not equal"
+    | otherwise = Matrix numRowsA numColsA $ V.zipWith (-) dataA dataB
 
 matrixMult :: Matrix -> Matrix -> Matrix
 matrixMult a@(Matrix numRowsA numColsA dataA) b@(Matrix numRowsB numColsB dataB)
@@ -54,18 +147,6 @@ matrixMult a@(Matrix numRowsA numColsA dataA) b@(Matrix numRowsB numColsB dataB)
                     total <- readSTRef sum
                     M.write result (row * numColsB + col) total
             V.unsafeFreeze result
-
-tupleToMatrix :: Tuple -> Matrix
-tupleToMatrix (x, y, z, w) = Matrix 4 1 $ V.fromList [x, y, z, w]
-
-matrixToTuple :: Matrix -> Tuple
-matrixToTuple (Matrix numRows numCols matrixData)
-    | numRows /= 4 || numCols /= 1
-        = error "only matrices of size 4x1 may be converted"
-    | otherwise = let (x:y:z:w:[]) = V.toList matrixData in (x, y, z, w)
-
-matrixTupleMult :: Matrix -> Tuple -> Tuple
-matrixTupleMult m t = matrixToTuple $ matrixMult m (tupleToMatrix t)
 
 identityMatrix4 = Matrix 4 4 $ V.fromList
     [ 1, 0, 0, 0

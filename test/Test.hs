@@ -6,7 +6,6 @@ import qualified Data.Vector.Unboxed as V
 import Test.HUnit
 import System.Exit
 
-import Tuple
 import Canvas
 import Matrix
 
@@ -14,11 +13,6 @@ assertFloatsEq :: String -> Double -> Double -> Assertion
 assertFloatsEq preface d1 d2 = unless (floatsEq d1 d2) (assertFailure msg)
     where msg = (if null preface then "" else preface ++ "\n") ++
                 "expected: " ++ show d2 ++ "\n but got: " ++ show d1
-
-assertTuplesEq :: String -> Tuple -> Tuple -> Assertion
-assertTuplesEq preface t1 t2 = unless (tuplesEq t1 t2) (assertFailure msg)
-    where msg = (if null preface then "" else preface ++ "\n") ++
-                "expected: " ++ show t2 ++ "\n but got: " ++ show t1
 
 -- chapter 1 tests, tuples.feature
 
@@ -45,62 +39,62 @@ testTuples02 = TestCase $ do
 -- Scenario: point() creates tuples with w=1
 testTuples03 = TestCase $ do
     let p = point 4 (-4) 3
-    assertTuplesEq "for (point 4 (-4) 3)" p (tuple 4 (-4) 3 1)
+    assertEqual "for (point 4 (-4) 3)" p (tuple 4 (-4) 3 1)
 
 -- Scenario: vector() creates tuples with w=0
 testTuples04 = TestCase $ do
     let v = vector 4 (-4) 3
-    assertTuplesEq "for (vector 4 (-4) 3)" v (tuple 4 (-4) 3 0)
+    assertEqual "for (vector 4 (-4) 3)" v (tuple 4 (-4) 3 0)
 
 -- Scenario: Adding two tuples
 testTuples05 = TestCase $ do
     let a1 = tuple 3 (-2) 5 1
     let a2 = tuple (-2) 3 1 0
-    assertTuplesEq "for ((addTuples a1 a2) == tuple 1 1 6 1)"
+    assertEqual "for ((addTuples a1 a2) == tuple 1 1 6 1)"
         (addTuples a1 a2) (tuple 1 1 6 1)
 
 -- Scenario: Subtracting two points
 testTuples06 = TestCase $ do
     let p1 = point 3 2 1
     let p2 = point 5 6 7
-    assertTuplesEq "for ((subTuples p1 p2) == vector -2 -4 -6)"
+    assertEqual "for ((subTuples p1 p2) == vector -2 -4 -6)"
         (subTuples p1 p2) (vector (-2) (-4) (-6))
 
 -- Scenario: Subtracting a vector from a point
 testTuples07 = TestCase $ do
     let p = point 3 2 1
     let v = vector 5 6 7
-    assertTuplesEq "for (subTuples p v) == point -2 -4 -6"
+    assertEqual "for (subTuples p v) == point -2 -4 -6"
         (subTuples p v) (point (-2) (-4) (-6))
 
 -- Scenario: Subtracting a vector from the zero vector
 testTuples08 = TestCase $ do
     let v = vector 1 (-2) 3
-    assertTuplesEq "for (subTuples z v) == vector -1 2 -3"
-        (subTuples zero v) (vector (-1) 2 (-3))
+    assertEqual "for (subTuples z v) == vector -1 2 -3"
+        (subTuples zero4x1 v) (vector (-1) 2 (-3))
 
 -- Scenario: Negating a tuple
 testTuples09 = TestCase $ do
     let a = tuple 1 (-2) 3 (-4)
-    assertTuplesEq "for (negTuple a) == tuple -1 2 -3 4"
+    assertEqual "for (negTuple a) == tuple -1 2 -3 4"
         (negTuple a) (tuple (-1) 2 (-3) 4)
 
 -- Scenario: Multiplying a tuple by a scalar
 testTuples10 = TestCase $ do
     let a = tuple 1 (-2) 3 (-4)
-    assertTuplesEq "for (multScalar a 3.5) == tuple 3.5 -7 10.5 -14)"
+    assertEqual "for (multScalar a 3.5) == tuple 3.5 -7 10.5 -14)"
         (multScalar a 3.5) (tuple 3.5 (-7) 10.5 (-14))
 
 -- Scenario: Multiplying a tuple by a fraction
 testTuples11 = TestCase $ do
     let a = tuple 1 (-2) 3 (-4)
-    assertTuplesEq "for (multScalar a 0.5) == tuple 0.5 -1 1.5 -2)"
+    assertEqual "for (multScalar a 0.5) == tuple 0.5 -1 1.5 -2)"
         (multScalar a 0.5) (tuple 0.5 (-1) 1.5 (-2))
 
 -- Scenario: Dividing a tuple by a scalar
 testTuples12 = TestCase $ do
     let a = tuple 1 (-2) 3 (-4)
-    assertTuplesEq "for (divScalar a 2) == tuple 0.5 -1 1.5 -2"
+    assertEqual "for (divScalar a 2) == tuple 0.5 -1 1.5 -2"
         (divScalar a 2) (tuple 0.5 (-1) 1.5 (-2))
 
 -- Scenario: Computing the magnitude of vector(1, 0, 0)
@@ -131,12 +125,12 @@ testTuples17 = TestCase $ do
 -- Scenario: Normalizing vector(4, 0, 0) gives (1, 0, 0)
 testTuples18 = TestCase $ do
     let v = vector 4 0 0
-    assertTuplesEq "for (magnitude v)" (normalize v) (vector 1 0 0)
+    assertEqual "for (magnitude v)" (normalize v) (vector 1 0 0)
 
 -- Scenario: Normalizing vector(1, 2, 3)
 testTuples19 = TestCase $ do
     let v = vector 1 2 3
-    assertTuplesEq "for (magnitude v)" (normalize v)
+    assertEqual "for (magnitude v)" (normalize v)
         (vector 0.26726 0.53452 0.80178)
 
 -- Scenario: The magnitude of a normalized vector
@@ -156,8 +150,8 @@ testTuples21 = TestCase $ do
 testTuples22 = TestCase $ do
     let a = vector 1 2 3
     let b = vector 2 3 4
-    assertTuplesEq "for (cross a b)" (cross a b) (vector (-1) 2 (-1))
-    assertTuplesEq "for (cross b a)" (cross b a) (vector 1 (-2) 1)
+    assertEqual "for (cross a b)" (cross a b) (vector (-1) 2 (-1))
+    assertEqual "for (cross b a)" (cross b a) (vector 1 (-2) 1)
 
 tupleTests = TestList
     [ TestLabel "testTuples01" testTuples01
@@ -355,7 +349,7 @@ testMatrix06 = TestCase $ do
 testMatrix07 = TestCase $ do
     let m = Matrix 4 4 $ V.fromList [1,2,3,4,2,4,4,2,8,6,4,1,0,0,0,1]
     let b = tuple 1 2 3 1
-    assertTuplesEq "for (matrixTupleMult m b)" (matrixTupleMult m b)
+    assertEqual "for (matrixMult m b)" (matrixMult m b)
         (tuple 18 24 33 1)
 
 -- Scenario: Transposing a matrix

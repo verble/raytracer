@@ -1,7 +1,6 @@
 
 module Main where
 
-import Tuple
 import Canvas
 import Matrix
 

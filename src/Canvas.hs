@@ -4,7 +4,7 @@ module Canvas where
 import qualified Data.Vector.Unboxed as V
 import Data.List (intercalate)
 
-import Tuple
+import Matrix
 
 type Color = (Double, Double, Double)
 

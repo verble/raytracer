@@ -15,8 +15,7 @@ extra-source-files:  README.md
 executable raytracer
   hs-source-dirs:      src
   main-is:             Main.hs
-  other-modules:       Tuple
-                     , Canvas
+  other-modules:       Canvas
                      , Matrix
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
@@ -24,8 +23,7 @@ executable raytracer
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Tuple
-                     , Canvas
+  exposed-modules:     Canvas
                      , Matrix
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
