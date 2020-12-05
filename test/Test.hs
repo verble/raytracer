@@ -8,6 +8,7 @@ import System.Exit
 
 import Canvas
 import Matrix
+import Ray
 
 assertFloatsEq :: String -> Double -> Double -> Assertion
 assertFloatsEq preface d1 d2 = unless (floatsEq d1 d2) (assertFailure msg)
@@ -681,10 +682,205 @@ transformTests = TestList
     , TestLabel "testTransform19" testTransform19
     ]
 
+-- chapter 5 tests, rays.feature
+
+-- Scenario: Creating and querying a ray
+testRay01 = TestCase $ do
+    let o = point 1 2 3
+    let d = vector 4 5 6
+    let r = ray o d
+    assertEqual "for (rayOrigin r)" o (rayOrigin r)
+    assertEqual "for (direction r)" d (direction r)
+
+-- Scenario: Computing a point from a distance
+testRay02 = TestCase $ do
+    let r = ray (point 2 3 4) (vector 1 0 0)
+    assertEqual "for (position r 0)" (point 2 3 4) (position r 0)
+    assertEqual "for (position r 1)" (point 3 3 4) (position r 1)
+    assertEqual "for (position r -1)" (point 1 3 4) (position r (-1))
+    assertEqual "for (position r 2.5)" (point 4.5 3 4) (position r 2.5)
+
+-- Scenario: A ray intersects a sphere at two points
+testRay03 = TestCase $ do
+    let r = ray (point 0 0 (-5)) (vector 0 0 1)
+    let s = sphere
+    let xs = intersects s r
+    assertEqual "for (length xs)" 2 (length xs)
+    assertFloatsEq "for (xs !! 0)" 4.0 (tValue (xs !! 0))
+    assertFloatsEq "for (xs !! 1)" 6.0 (tValue (xs !! 1))
+
+-- Scenario: A ray intersects a sphere at a tangent
+testRay04 = TestCase $ do
+    let r = ray (point 0 1 (-5)) (vector 0 0 1)
+    let s = sphere
+    let xs = intersects s r
+    assertEqual "for (length xs)" 2 (length xs)
+    assertFloatsEq "for (xs !! 0)" 5.0 (tValue (xs !! 0))
+    assertFloatsEq "for (xs !! 1)" 5.0 (tValue (xs !! 1))
+
+-- Scenario: A ray misses a sphere
+testRay05 = TestCase $ do
+    let r = ray (point 0 2 (-5)) (vector 0 0 1)
+    let s = sphere
+    let xs = intersects s r
+    assertEqual "for (length xs)" 0 (length xs)
+
+-- Scenario: A ray originates inside a sphere
+testRay06 = TestCase $ do
+    let r = ray (point 0 0 0) (vector 0 0 1)
+    let s = sphere
+    let xs = intersects s r
+    assertEqual "for (length xs)" 2 (length xs)
+    assertFloatsEq "for (xs !! 0)" (tValue (xs !! 0)) (-1)
+    assertFloatsEq "for (xs !! 1)" (tValue (xs !! 1)) 1
+
+-- Scenario: A sphere is behind a ray
+testRay07 = TestCase $ do
+    let r = ray (point 0 0 5) (vector 0 0 1)
+    let s = sphere
+    let xs = intersects s r
+    assertEqual "for (length xs)" 2 (length xs)
+    assertFloatsEq "for (xs !! 0)" (-6) (tValue (xs !! 0))
+    assertFloatsEq "for (xs !! 1)" (-4) (tValue (xs !! 1))
+
+-- Scenario: An intersection encapsulates t and object
+testRay08 = TestCase $ do
+    let s = sphere
+    let i = intersection 3.5 s
+    assertEqual "for (tValue i)" (tValue i) 3.5
+    assertEqual "for (object i)" (object i) s
+
+-- Scenario: Aggregating intersections
+testRay09 = TestCase $ do
+    let s = sphere
+    let i1 = intersection 1 s
+    let i2 = intersection 2 s
+    let xs = intersections [i1,i2]
+    assertEqual "for (length xs)" (length xs) 2
+    assertEqual "for (tValue (xs !! 0))" (tValue (xs !! 0)) 1
+    assertEqual "for (tValue (xs !! 1))" (tValue (xs !! 1)) 2
+
+-- Scenario: Intersect sets the object on the intersection
+testRay10 = TestCase $ do
+    let r = ray (point 0 0 (-5)) (vector 0 0 1)
+    let s = sphere
+    let xs = intersects s r
+    assertEqual "for (length xs)" (length xs) 2
+    assertEqual "for (object (xs !! 0))" (object (xs !! 0)) s
+    assertEqual "for (object (xs !! 1))" (object (xs !! 1)) s
+
+-- Scenario: The hit, when all intersections have positive t
+testRay11 = TestCase $ do
+    let s = sphere
+    let i1 = intersection 1 s
+    let i2 = intersection 2 s
+    let xs = intersections [i1, i2]
+    let i = hit xs
+    assertEqual "for (hit xs)" i (Just i1)
+
+-- Scenario: The hit, when some intersections have negative t
+testRay12 = TestCase $ do
+    let s = sphere
+    let i1 = intersection (-1) s
+    let i2 = intersection 1 s
+    let xs = intersections [i2, i1]
+    let i = hit xs
+    assertEqual "for (hit xs)" i (Just i2)
+
+-- Scenario: The hit, when all intersections have negative t
+testRay13 = TestCase $ do
+    let s = sphere
+    let i1 = intersection (-2) s
+    let i2 = intersection (-1) s
+    let xs = intersections [i2, i1]
+    let i = hit xs
+    assertEqual "for (hit xs)" i Nothing
+
+-- Scenario: The hit is always the lowest nonnegative intersection
+testRay14 = TestCase $ do
+    let s = sphere
+    let i1 = intersection 5 s
+    let i2 = intersection 7 s
+    let i3 = intersection (-3) s
+    let i4 = intersection 2 s
+    let xs = intersections [i1, i2, i3, i4]
+    let i = hit xs
+    assertEqual "for (hit xs)" i (Just i4)
+
+-- Scenario: Translating a ray
+testRay15 = TestCase $ do
+    let r = ray (point 1 2 3) (vector 0 1 0)
+    let m = translation 3 4 5
+    let r2 = transform r m
+    assertEqual "for (rayOrigin r2)" (rayOrigin r2) (point 4 6 8)
+    assertEqual "for (direction r2)" (direction r2) (vector 0 1 0)
+
+-- Scenario: Scaling a ray
+testRay16 = TestCase $ do
+    let r = ray (point 1 2 3) (vector 0 1 0)
+    let m = scaling 2 3 4
+    let r2 = transform r m
+    assertEqual "for (rayOrigin r2)" (rayOrigin r2) (point 2 6 12)
+    assertEqual "for (direction r2)" (direction r2) (vector 0 3 0)
+
+-- Scenario: A sphere's default transformation
+testRay17 = TestCase $ do
+    let s = sphere
+    assertEqual "for (sphereTransform s)"
+        (sphereTransform s) identityMatrix4
+
+-- Scenario: Changing a sphere's transformation
+testRay18 = TestCase $ do
+    let s = sphere
+    let t = translation 2 3 4
+    let s' = setTransform s t
+    assertEqual "for (sphereTransform s')" (sphereTransform s') t
+
+-- Scenario: Intersecting a scaled sphere with a ray
+testRay19 = TestCase $ do
+    let r = ray (point 0 0 (-5)) (vector 0 0 1)
+    let s = sphere
+    let s' = setTransform s (scaling 2 2 2)
+    let xs = intersects s' r
+    assertEqual "for (length xs)" (length xs) 2
+    assertEqual "for (tValue (xs !! 0))" (tValue (xs !! 0)) 3
+    assertEqual "for (tValue (xs !! 1))" (tValue (xs !! 1)) 7
+
+-- Scenario: Intersecting a translated sphere with a ray
+testRay20 = TestCase $ do
+    let r = ray (point 0 0 (-5)) (vector 0 0 1)
+    let s = sphere
+    let s' = setTransform s (translation 5 0 0)
+    let xs = intersects s' r
+    assertEqual "for (length x)" (length xs) 0
+
+rayTests = TestList
+    [ TestLabel "testRay01" testRay01
+    , TestLabel "testRay02" testRay02
+    , TestLabel "testRay03" testRay03
+    , TestLabel "testRay04" testRay04
+    , TestLabel "testRay05" testRay05
+    , TestLabel "testRay06" testRay06
+    , TestLabel "testRay07" testRay07
+    , TestLabel "testRay08" testRay08
+    , TestLabel "testRay09" testRay09
+    , TestLabel "testRay10" testRay10
+    , TestLabel "testRay11" testRay11
+    , TestLabel "testRay12" testRay12
+    , TestLabel "testRay13" testRay13
+    , TestLabel "testRay14" testRay14
+    , TestLabel "testRay15" testRay15
+    , TestLabel "testRay16" testRay16
+    , TestLabel "testRay17" testRay17
+    , TestLabel "testRay18" testRay18
+    , TestLabel "testRay19" testRay19
+    , TestLabel "testRay20" testRay20
+    ]
+
 main :: IO ()
 main = do
     results <- runTestTT $ TestList
-        [tupleTests, canvasTests, matrixTests, transformTests]
+        [tupleTests, canvasTests, matrixTests, transformTests, rayTests]
     if (errors results + failures results == 0)
         then exitWith ExitSuccess
         else exitWith (ExitFailure 1)

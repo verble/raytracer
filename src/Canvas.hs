@@ -11,6 +11,9 @@ type Color = (Double, Double, Double)
 color :: Double -> Double -> Double -> Color
 color r g b = (r, g, b)
 
+black :: Color
+black = color 0 0 0
+
 white :: Color
 white = color 1 1 1
 

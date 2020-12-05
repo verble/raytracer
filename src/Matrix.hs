@@ -28,6 +28,8 @@ epsilon = 0.00001
 floatsEq :: Double -> Double -> Bool
 floatsEq a b = abs (a - b) < epsilon
 
+origin = point 0 0 0
+
 x :: Matrix -> Double
 x (Matrix numRows numCols matrixData)
     | numRows /= 4 || numCols /= 1 = error "matrix is not a tuple"
