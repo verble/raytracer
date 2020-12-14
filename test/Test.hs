@@ -877,10 +877,179 @@ rayTests = TestList
     , TestLabel "testRay20" testRay20
     ]
 
+-- chapter 6 tests, sphers.feature
+
+-- Scenario: The normal on a sphere at a point on the x axis
+testSphere01 = TestCase $ do
+    let s = sphere
+    let n = normalAt s (point 1 0 0)
+    assertEqual "for (normalAt s (point 1 0 0))" n (vector 1 0 0)
+
+-- Scenario: The normal on a sphere at a point on the y axis
+testSphere02 = TestCase $ do
+    let s = sphere
+    let n = normalAt s (point 0 1 0)
+    assertEqual "for (normalAt s (point 0 1 0))" n (vector 0 1 0)
+
+-- Scenario: The normal on a sphere at a point on the z axis
+testSphere03 = TestCase $ do
+    let s = sphere
+    let n = normalAt s (point 0 0 1)
+    assertEqual "for (normalAt s (point 0 0 1))" n (vector 0 0 1)
+
+-- Scenario: The normal on a sphere at a nonaxial point
+testSphere04 = TestCase $ do
+    let s = sphere
+    let n = normalAt s (point (sqrt 3 / 3) (sqrt 3 / 3) (sqrt 3 / 3))
+    assertEqual "for (normalAt s (√3/3 √3/3 √3/3))"
+        (vector (sqrt 3 / 3) (sqrt 3 / 3) (sqrt 3 / 3)) n
+
+-- Scenario: The normal is a normalized vector
+testSphere05 = TestCase $ do
+    let s = sphere
+    let n = normalAt s (point (sqrt 3 / 3) (sqrt 3 / 3) (sqrt 3 / 3))
+    assertEqual "for (normalize n == n)"
+        (normalize n) n
+
+-- Scenario: Computing the normal on a translated sphere
+testSphere06 = TestCase $ do
+    let s = sphere
+    let s' = setTransform s (translation 0 1 0)
+    let n = normalAt s' (point 0 1.70711 (-0.70711))
+    assertEqual "for (normalAt (point 0 1.70711 (-0.70711)))"
+        n (vector 0 0.70711 (-0.70711))
+
+-- Scenario: Computing the normal on a transformed sphere
+testSphere07 = TestCase $ do
+    let s = sphere
+    let m = (scaling 1 0.5 1) % (rotationZ (pi/5))
+    let s' = setTransform s m
+    let n = normalAt s' (point 0 (sqrt 2 / 2) (-(sqrt 2 / 2)))
+    assertEqual "for (normalAt (point(0, √2/2, -√2/2)))"
+        (vector 0 0.97014 (-0.24254)) n
+
+-- Scenario: Reflecting a vector approaching at 45°
+testSphere08 = TestCase $ do
+    let v = vector 1 (-1) 0
+    let n = vector 0 1 0
+    let r = reflect v n
+    assertEqual "for (reflect v n)" (vector 1 1 0) r
+
+-- Scenario: Reflecting a vector off a slanted surface
+testSphere09 = TestCase $ do
+    let v = vector 0 (-1) 0
+    let n = vector (sqrt 2 / 2) (sqrt 2 / 2) 0
+    let r = reflect v n
+    assertEqual "for (reflect v n)" (vector 1 0 0) r
+
+-- Scenario: A point light has a position and intensity
+testSphere10 = TestCase $ do
+    let i = color 1 1 1
+    let p = point 0 0 0
+    let light = pointLight p i
+    assertEqual "for (lightPos light)" (lightPos light) p
+    assertEqual "for (intensity light)" (intensity light) i
+
+-- Scenario: The default material
+testSphere11 = TestCase $ do
+    let m = material
+    assertEqual "for (materialColor m)" (materialColor m) (1, 1, 1)
+    assertFloatsEq "for (ambient m)" (ambient m) 0.1
+    assertFloatsEq "for (diffuse m)" (diffuse m) 0.9
+    assertFloatsEq "for (specular m)" (specular m) 0.9
+    assertFloatsEq "for (shininess m)" (shininess m) 200.0
+
+-- Scenario: A sphere has a default material
+testSphere12 = TestCase $ do
+    let s = sphere
+    let m = material
+    assertEqual "for (material s)" (sphereMaterial s) m
+
+-- Scenario: A sphere may be assigned a material
+testSphere13 = TestCase $ do
+    let s = sphere
+    let m = material
+    let m' = m { ambient = 1.0 }
+    let s' = s { sphereMaterial = m' }
+    assertEqual "for (material s')" (sphereMaterial s') m'
+
+-- Scenario: Lighting with the eye between the light and the surface
+testSphere14 = TestCase $ do
+    let m = material
+    let pos = point 0 0 0
+    let eyev = vector 0 0 (-1)
+    let normalv = vector 0 0 (-1)
+    let light = pointLight (point 0 0 (-10)) (color 1 1 1)
+    let result = lighting m light pos eyev normalv
+    assertColorsEq "for result" result (color 1.9 1.9 1.9)
+
+-- Scenario: Lighting with the eye between light and surface, eye offset 45°
+testSphere15 = TestCase $ do
+    let m = material
+    let pos = point 0 0 0
+    let eyev = vector 0 (sqrt 2 / 2) (-(sqrt 2) / 2)
+    let normalv = vector 0 0 (-1)
+    let light = pointLight (point 0 0 (-10)) (color 1 1 1)
+    let result = lighting m light pos eyev normalv
+    assertColorsEq "for result" result (color 1.0 1.0 1.0)
+
+-- Scenario: Lighting with eye opposite surface, light offset 45°
+testSphere16 = TestCase $ do
+    let m = material
+    let pos = point 0 0 0
+    let eyev = vector 0 0 (-1)
+    let normalv = vector 0 0 (-1)
+    let light = pointLight (point 0 10 (-10)) (color 1 1 1)
+    let result = lighting m light pos eyev normalv
+    assertColorsEq "for result" result (color 0.7364 0.7364 0.7364)
+
+-- Scenario: Lighting with eye in the path of the reflection vector
+testSphere17 = TestCase $ do
+    let m = material
+    let pos = point 0 0 0
+    let eyev = vector 0 (-(sqrt 2) / 2) (-(sqrt 2) / 2)
+    let normalv = vector 0 0 (-1)
+    let light = pointLight (point 0 10 (-10)) (color 1 1 1)
+    let result = lighting m light pos eyev normalv
+    assertColorsEq "for result" result (color 1.6364 1.6364 1.6364)
+
+-- Scenario: Lighting with the light behind the surface
+testSphere18 = TestCase $ do
+    let m = material
+    let pos = point 0 0 0
+    let eyev = vector 0 0 (-1)
+    let normalv = vector 0 0 (-1)
+    let light = pointLight (point 0 0 10) (color 1 1 1)
+    let result = lighting m light pos eyev normalv
+    assertColorsEq "for result" result (color 0.1 0.1 0.1)
+
+sphereTests = TestList
+    [ TestLabel "testSphere01" testSphere01
+    , TestLabel "testSphere02" testSphere02
+    , TestLabel "testSphere03" testSphere03
+    , TestLabel "testSphere04" testSphere04
+    , TestLabel "testSphere05" testSphere05
+    , TestLabel "testSphere06" testSphere06
+    , TestLabel "testSphere07" testSphere07
+    , TestLabel "testSphere08" testSphere08
+    , TestLabel "testSphere09" testSphere09
+    , TestLabel "testSphere10" testSphere10
+    , TestLabel "testSphere11" testSphere11
+    , TestLabel "testSphere12" testSphere12
+    , TestLabel "testSphere13" testSphere13
+    , TestLabel "testSphere14" testSphere14
+    , TestLabel "testSphere15" testSphere15
+    , TestLabel "testSphere16" testSphere16
+    , TestLabel "testSphere17" testSphere17
+    , TestLabel "testSphere18" testSphere18
+    ]
+
 main :: IO ()
 main = do
     results <- runTestTT $ TestList
-        [tupleTests, canvasTests, matrixTests, transformTests, rayTests]
+        [ tupleTests, canvasTests, matrixTests, transformTests
+        , rayTests, sphereTests
+        ]
     if (errors results + failures results == 0)
         then exitWith ExitSuccess
         else exitWith (ExitFailure 1)

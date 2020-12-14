@@ -2,44 +2,75 @@
 module Main where
 
 import Data.List (foldl')
+import Control.Monad
+import System.ProgressBar
+import Control.DeepSeq
 
 import Canvas
 import Matrix
 import Ray
 
-main = writeCanvas image "rendered.ppm"
+main' = writeCanvas image "rendered.ppm"
 
+-- purply color
+mat1 = material { materialColor = color 1 0.2 1 }
+-- sphere is unit sphere at origin
+obj1 = sphere { sphereMaterial = mat1 }
+obj2 = (setTransform sphere (scaling 1 0.5 1)) { sphereMaterial = mat1 }
 
 -- light located at xy origin and forward 10 units on z axis
-light = point 0 0 (-5)
+light1 = pointLight (point (-10) (-10) (-10)) (color 1 1 1)
 
--- sphere is unit sphere at origin
-obj1 = setTransform sphere (scaling 1 0.5 1)
+-- pixels on screen
+canvasSize = 300
 
--- need a ray for every pixel on canvas
-rays = do
-    -- canvas is 300 x 300 pixels
-    -- canvas located at (point 0 0 -2) and is 6x6 units
-    let canvasZ = 10
-    let xPxCoords = [0..99] :: [Int]
-    let yPxCoords = [0..99] :: [Int]
-    let unitsPerPixel = 7 / 100
-    let convertX x = (fromIntegral x - 50) * unitsPerPixel
-    let convertY y = (fromIntegral y - 50) * unitsPerPixel
-    x <- xPxCoords
-    y <- yPxCoords
-    let canvasCoords = (x,y)
-    let worldCoords@(worldX, worldY) = (convertX x, convertY y)
-    let dir = matrixSub (point worldX worldY canvasZ) light
-    pure ((x,y), ray light dir)
+screenCoords :: [((Int, Int), Matrix)]
+screenCoords = do
+    -- points in worldspace
+    let screenSize = 7
+    -- screen is located at x=0 and y=0
+    let screenToWorld = (* (screenSize / fromIntegral canvasSize))
+            . subtract (fromIntegral canvasSize / 2)
+            . fromIntegral
+    x <- [0..canvasSize-1]
+    y <- [0..canvasSize-1]
+    pure $ ((x, y), point (screenToWorld x) (screenToWorld y) 10)
 
-pixelData = map helper rays
-    where helper (canvasCoords, ray) =
-              case hit (intersects obj1 ray) of
-                  Nothing -> (canvasCoords, black)
-                  Just _ -> (canvasCoords, color 1 0 0)
+castOrigin :: Matrix
+castOrigin = point 0 0 (-5)
+
+-- calculates the ray from the "eye" to the screen
+pixelToRay :: Matrix -> Ray
+pixelToRay point = Ray castOrigin (normalize $ matrixSub point castOrigin)
+
+renderPixel :: Matrix -> Color
+renderPixel screenPos =
+    case hit (intersects obj1 r) of
+        Nothing -> black
+        Just h@(Intersection tValue object) ->
+            let point = position r tValue
+                normal = normalAt object point
+                eye = negTuple (direction r)
+            in lighting (sphereMaterial obj1) light1 point eye normal
+    where r = pixelToRay screenPos
+
+pixelData = map helper screenCoords
+    where helper (canvasCoords, ray) = (canvasCoords, renderPixel ray)
 
 image = foldl'
-    (\canvas ((x,y),col) -> writePixel canvas x (100-y-1) col)
+    (\canvas ((x,y),col) -> writePixel canvas x y col)
     (canvas 100 100)
     (pixelData)
+
+-- helper' :: ProgressBar s -> Canvas -> ((Int,Int), Matrix) -> IO Canvas
+helper' pb canvas ((x,y), ray) = do
+    let color = renderPixel ray
+    deepseq color $ incProgress pb 1
+    pure (writePixel canvas x y color)
+
+main = do
+    pb <- newProgressBar
+        defStyle 10 (Progress 0 (canvasSize * canvasSize) ())
+    c <- foldM (helper' pb) (canvas canvasSize canvasSize) screenCoords
+    putStrLn "done!"
+    writeCanvas c "rendered.ppm"
